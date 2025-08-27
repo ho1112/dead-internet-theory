@@ -43,3 +43,6 @@ next-env.d.ts
 # dev .md
 devNote*.md
 design.md
+
+# scripts with sensitive data
+scripts/generate-hash*.js
