@@ -102,9 +102,11 @@ export default function AdminLoginPage() {
           </div>
         </form>
 
-        <div className="text-center text-sm text-gray-500">
-          <p>테스트 계정: admin / admin123</p>
-        </div>
+        {process.env.NODE_ENV === 'development' && (
+          <div className="text-center text-sm text-gray-500">
+            <p>테스트 계정: admin / admin123</p>
+          </div>
+        )}
       </div>
     </div>
   );
