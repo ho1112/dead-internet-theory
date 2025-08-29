@@ -33,7 +33,25 @@ export default function AdminDashboardPage() {
   const [error, setError] = useState('');
   const [searchPostId, setSearchPostId] = useState('');
   const [currentSearch, setCurrentSearch] = useState('');
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const router = useRouter();
+
+  // 인증 상태 확인
+  const checkAuth = async () => {
+    try {
+      // 간단한 인증 체크 (실제로는 JWT나 세션 토큰 사용 권장)
+      const response = await fetch('/api/admin/auth-check');
+      if (response.ok) {
+        setIsAuthenticated(true);
+      } else {
+        setIsAuthenticated(false);
+        router.push('/admin/login');
+      }
+    } catch (error) {
+      setIsAuthenticated(false);
+      router.push('/admin/login');
+    }
+  };
 
   // 댓글 목록 조회
   const fetchComments = async (page: number = 1, postId?: string) => {
@@ -111,14 +129,28 @@ export default function AdminDashboardPage() {
   };
 
   useEffect(() => {
-    fetchComments();
+    checkAuth();
   }, []);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchComments();
+    }
+  }, [isAuthenticated]);
 
   // 로그아웃
   const handleLogout = () => {
     // 간단한 로그아웃 (실제로는 세션/쿠키 정리 필요)
     router.push('/admin/login');
   };
+
+  if (!isAuthenticated) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-xl">인증 확인 중...</div>
+      </div>
+    );
+  }
 
   if (isLoading && comments.length === 0) {
     return (
