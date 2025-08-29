@@ -6,7 +6,9 @@ import { v4 as uuidv4 } from 'uuid'
 
 // CORS 헤더 설정
 const corsHeaders = {
-  'Access-Control-Allow-Origin': 'http://localhost:3000',
+  'Access-Control-Allow-Origin': process.env.NODE_ENV === 'production' 
+    ? 'https://mintora.me'  // 운영 환경 블로그 도메인
+    : 'http://localhost:3000',  // 로컬 개발 환경
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type',
 }
