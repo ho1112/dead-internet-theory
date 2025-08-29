@@ -2,13 +2,22 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function GET(request: NextRequest) {
   try {
-    // TODO: 실제로는 JWT 토큰이나 세션을 확인해야 함
-    // 현재는 간단한 응답만 반환
+    // 간단한 세션 기반 인증 체크
+    // TODO: 실제 운영에서는 JWT 토큰이나 더 안전한 세션 관리 필요
     
-    // 쿠키나 헤더에서 인증 정보 확인
-    const authHeader = request.headers.get('authorization');
+    // 쿠키에서 세션 정보 확인
+    const sessionCookie = request.cookies.get('admin-session');
     
-    // 임시로 항상 인증 실패 처리 (보안 강화)
+    if (sessionCookie && sessionCookie.value === 'authenticated') {
+      return NextResponse.json(
+        { 
+          success: true, 
+          message: '인증됨' 
+        },
+        { status: 200 }
+      );
+    }
+    
     return NextResponse.json(
       { 
         success: false, 

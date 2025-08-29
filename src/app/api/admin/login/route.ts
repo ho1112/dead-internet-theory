@@ -41,14 +41,24 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // 로그인 성공
-    return NextResponse.json({
+    // 로그인 성공 시 세션 쿠키 설정
+    const response = NextResponse.json({
       success: true,
       message: '로그인 성공',
       user: {
         email: user.email
       }
     });
+
+    // 세션 쿠키 설정 (7일간 유효)
+    response.cookies.set('admin-session', 'authenticated', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      maxAge: 7 * 24 * 60 * 60 // 7일
+    });
+
+    return response;
 
   } catch (error) {
     console.error('Login error:', error);
