@@ -1,0 +1,54 @@
+name: Bot Comment Cron Job
+
+on:
+  schedule:
+    # 5분마다 실행 (UTC 시간 기준)
+    - cron: '*/5 * * * *'
+  # 수동 실행도 가능하도록 추가
+  workflow_dispatch:
+
+jobs:
+  process-scheduled-jobs:
+    runs-on: ubuntu-latest
+    name: Process Scheduled Bot Jobs
+    
+    steps:
+      - name: Trigger Bot Cron API
+        run: |
+          echo "🕐 Cron Job 실행 시작: $(date)"
+          
+          # 환경 변수에서 URL 가져오기 (기본값은 로컬 테스트용)
+          API_URL="${VERCEL_URL:-http://localhost:3001}"
+          
+          echo "🌐 API URL: $API_URL"
+          
+          # Cron Job API 호출
+          response=$(curl -s -w "\n%{http_code}" -X GET "$API_URL/api/cron/process-scheduled-jobs")
+          
+          # 응답과 HTTP 상태 코드 분리
+          http_code=$(echo "$response" | tail -n1)
+          response_body=$(echo "$response" | head -n -1)
+          
+          echo "📊 HTTP 상태 코드: $http_code"
+          echo "📝 응답 내용:"
+          echo "$response_body" | jq '.' 2>/dev/null || echo "$response_body"
+          
+          # HTTP 상태 코드 확인
+          if [ "$http_code" -eq 200 ]; then
+            echo "✅ Cron Job 실행 성공!"
+          else
+            echo "❌ Cron Job 실행 실패 (HTTP $http_code)"
+            exit 1
+          fi
+          
+          echo "🏁 Cron Job 실행 완료: $(date)"
+        
+        env:
+          # Vercel 배포 후에는 실제 도메인으로 설정
+          VERCEL_URL: ${{ secrets.VERCEL_URL }}
+      
+      - name: Cron Job 완료 알림
+        run: |
+          echo "🤖 봇 댓글 Cron Job이 성공적으로 실행되었습니다!"
+          echo "⏰ 실행 시간: $(date)"
+          echo "🌍 실행 환경: $RUNNER_OS"
