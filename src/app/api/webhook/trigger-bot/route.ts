@@ -1,52 +1,67 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
+import { getTableNames } from '@/lib/table-config';
 
-interface NewPostWebhook {
-  post_id: string;
-  url: string;
-}
+// Supabase 클라이언트 생성
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
+);
 
 export async function POST(request: NextRequest) {
   try {
-    const body: NewPostWebhook = await request.json();
-    
-    // 입력 검증
-    if (!body.post_id || !body.url) {
+    const { post_id, url } = await request.json();
+
+    if (!post_id || !url) {
       return NextResponse.json(
-        { 
-          success: false, 
-          message: 'post_id와 url이 필요합니다.' 
-        },
+        { success: false, message: 'post_id와 url이 필요합니다.' },
         { status: 400 }
       );
     }
 
-    console.log('🚀 새 포스트 감지!');
-    console.log('📝 Post ID:', body.post_id);
-    console.log('🔗 URL:', body.url);
-    console.log('⏰ 시간:', new Date().toISOString());
+    const tableNames = getTableNames();
 
-    // TODO: 여기에 AI 봇 호출 로직 추가 예정
-    // 1. AI 봇으로 댓글 생성
-    // 2. 데이터베이스에 저장
-    // 3. 블로그에 댓글 노출
+    // 1. 지연 시간 계산 (1분~3시간 랜덤)
+    const delayMinutes = Math.floor(Math.random() * (180 - 1 + 1)) + 1; // 1~180분
+    const delayMs = delayMinutes * 60 * 1000;
+    
+    // 2. 실행 시간 계산 (UTC 기준으로 현재 시간 + 지연 시간)
+    const executionTime = new Date(Date.now() + delayMs);
+    
+    // 3. 지연 실행 정보를 데이터베이스에 저장
+    const { data: scheduledJob, error: saveError } = await supabase
+      .from(tableNames.scheduledJobs || 'scheduled_jobs')
+      .insert({
+        id: crypto.randomUUID(),
+        post_id,
+        url,
+        execution_time: executionTime.toISOString(),
+        status: 'pending',
+        created_at: new Date().toISOString()
+      })
+      .select()
+      .single();
+
+    if (saveError) {
+      throw new Error(`지연 실행 정보 저장 실패: ${saveError.message}`);
+    }
 
     return NextResponse.json({
       success: true,
-      message: '새 포스트 감지 완료',
+      message: `봇 트리거가 예약되었습니다. ${delayMinutes}분 후 실행됩니다.`,
       data: {
-        post_id: body.post_id,
-        url: body.url,
-        received_at: new Date().toISOString()
+        post_id,
+        url,
+        delay_minutes: delayMinutes,
+        execution_time: executionTime.toISOString(),
+        job_id: scheduledJob.id
       }
     });
 
   } catch (error) {
     console.error('웹훅 처리 오류:', error);
     return NextResponse.json(
-      { 
-        success: false, 
-        message: '웹훅 처리 중 오류가 발생했습니다.' 
-      },
+      { success: false, message: `웹훅 처리 실패: ${error}` },
       { status: 500 }
     );
   }

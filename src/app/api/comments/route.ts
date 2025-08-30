@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { supabase } from '@/lib/supabase'
-import { CreateCommentRequest, CommentResponse } from '@/types/comment'
 import { getTableNames } from '@/lib/table-config'
 import { v4 as uuidv4 } from 'uuid'
 
@@ -40,7 +39,6 @@ export async function GET(request: NextRequest) {
       .from(tableNames.comments)
       .select('*')
       .eq('post_id', postId)
-      .eq('status', 'approved')
       .order('created_at', { ascending: true })
 
     if (error) {
@@ -113,7 +111,6 @@ export async function POST(request: NextRequest) {
       is_bot,
       parent_id,
       post_id,
-      status: 'approved', // 모든 댓글은 즉시 승인됨
       created_at: new Date().toISOString()
     }
 

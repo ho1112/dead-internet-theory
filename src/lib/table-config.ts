@@ -7,6 +7,7 @@ export const getTableNames = () => {
     comments: `${prefix}comments`,
     botPersonas: `${prefix}bot_personas`,
     adminUsers: `${prefix}admin_users`,
+    scheduledJobs: `${prefix}scheduled_jobs`,
   }
 }
 

@@ -3,15 +3,36 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
+interface BotTriggerResponse {
+  success: boolean;
+  message: string;
+  data: {
+    selected_bot: {
+      id: string;
+      nickname: string;
+      name: string;
+      selection_reason: string;
+      replyTargetId?: string;
+      replyTargetNickname?: string;
+    };
+    generated_comment: Comment;
+    available_personas: Array<{
+      name: string;
+      nickname: string;
+      lang: string;
+    }>;
+  };
+}
+
 interface Comment {
   id: string;
   content: string;
   author_name: string;
   author_avatar: string;
   is_bot: boolean;
+  parent_id: string | null;
   created_at: string;
   post_id: string;
-  status: string;
 }
 
 interface Pagination {
@@ -20,6 +41,18 @@ interface Pagination {
   total: number;
   totalPages: number;
 }
+
+interface PostStats {
+  postId: string;
+  url: string;
+  category: string;
+  language: string;
+  lastModified: string;
+  commentCount: number;
+  hasComments: boolean;
+}
+
+type TabType = 'comments' | 'posts';
 
 export default function AdminDashboardPage() {
   const [comments, setComments] = useState<Comment[]>([]);
@@ -34,6 +67,11 @@ export default function AdminDashboardPage() {
   const [searchPostId, setSearchPostId] = useState('');
   const [currentSearch, setCurrentSearch] = useState('');
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [activeTab, setActiveTab] = useState<TabType>('comments');
+  const [postsStats, setPostsStats] = useState<PostStats[]>([]);
+  const [postsLoading, setPostsLoading] = useState(false);
+  const [botTriggerLoading, setBotTriggerLoading] = useState<string | null>(null);
+  const [botTriggerResult, setBotTriggerResult] = useState<BotTriggerResponse | null>(null);
   const router = useRouter();
 
   // 인증 상태 확인
@@ -50,6 +88,58 @@ export default function AdminDashboardPage() {
     } catch (error) {
       setIsAuthenticated(false);
       router.push('/admin/login');
+    }
+  };
+
+  // 포스트 통계 조회
+  const fetchPostsStats = async () => {
+    try {
+      setPostsLoading(true);
+      
+      const response = await fetch('/api/admin/posts-stats');
+      const data = await response.json();
+
+      if (data.success) {
+        setPostsStats(data.data.posts);
+      } else {
+        setError(data.message || '포스트 통계 조회에 실패했습니다.');
+      }
+    } catch (error) {
+      setError('포스트 통계 조회 중 오류가 발생했습니다.');
+    } finally {
+      setPostsLoading(false);
+    }
+  };
+
+  // AI 봇 트리거
+  const triggerBotForPost = async (postId: string) => {
+    try {
+      setBotTriggerLoading(postId);
+      setBotTriggerResult(null);
+      
+      const response = await fetch('/api/bot/director', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ post_id: postId })
+      });
+
+      if (response.ok) {
+        const result: BotTriggerResponse = await response.json();
+        setBotTriggerResult(result);
+        
+        // 성공 시 댓글 목록 새로고침
+        if (activeTab === 'comments') {
+          fetchComments();
+        }
+      } else {
+        const errorData = await response.json();
+        alert(`AI 봇 트리거 실패: ${errorData.message}`);
+      }
+    } catch (error) {
+      console.error('AI 봇 트리거 오류:', error);
+      alert('AI 봇 트리거 중 오류가 발생했습니다.');
+    } finally {
+      setBotTriggerLoading(null);
     }
   };
 
@@ -134,9 +224,13 @@ export default function AdminDashboardPage() {
 
   useEffect(() => {
     if (isAuthenticated) {
-      fetchComments();
+      if (activeTab === 'comments') {
+        fetchComments();
+      } else if (activeTab === 'posts') {
+        fetchPostsStats();
+      }
     }
-  }, [isAuthenticated]);
+  }, [isAuthenticated, activeTab]);
 
   // 로그아웃
   const handleLogout = () => {
@@ -246,96 +340,134 @@ export default function AdminDashboardPage() {
           </div>
         </div>
 
-        {/* 검색 기능 */}
-        <div className="bg-white shadow overflow-hidden sm:rounded-md mb-6">
-          <div className="px-4 py-5 sm:px-6">
-            <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">댓글 검색</h3>
-            <div className="flex space-x-3">
-              <input
-                type="text"
-                placeholder="포스트 ID 입력 (예: ko/weekly/250823)"
-                value={searchPostId}
-                onChange={(e) => setSearchPostId(e.target.value)}
-                className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-              />
+        {/* 탭 네비게이션 */}
+        <div className="bg-white shadow rounded-lg mb-6">
+          <div className="border-b border-gray-200">
+            <nav className="-mb-px flex space-x-8 px-6">
               <button
-                onClick={handleSearch}
-                className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                onClick={() => setActiveTab('comments')}
+                className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'comments'
+                    ? 'border-indigo-500 text-indigo-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
               >
-                검색
+                💬 댓글 관리
               </button>
-              {currentSearch && (
-                <button
-                  onClick={handleClearSearch}
-                  className="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500"
-                >
-                  초기화
-                </button>
+              <button
+                onClick={() => setActiveTab('posts')}
+                className={`py-4 px-1 border-b-2 font-medium text-sm ${
+                  activeTab === 'posts'
+                    ? 'border-indigo-500 text-indigo-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                }`}
+              >
+                📝 포스트 목록
+              </button>
+            </nav>
+          </div>
+        </div>
+
+        {/* 댓글 관리 탭 */}
+        {activeTab === 'comments' && (
+          <>
+            {/* 검색 기능 */}
+            <div className="bg-white shadow overflow-hidden sm:rounded-md mb-6">
+              <div className="px-4 py-5 sm:px-6">
+                <h3 className="text-lg leading-6 font-medium text-gray-900 mb-4">댓글 검색</h3>
+                <div className="flex space-x-3">
+                  <input
+                    type="text"
+                    placeholder="포스트 ID 입력 (예: ko/weekly/250823)"
+                    value={searchPostId}
+                    onChange={(e) => setSearchPostId(e.target.value)}
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                    onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                  />
+                  <button
+                    onClick={handleSearch}
+                    className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                  >
+                    검색
+                  </button>
+                  {currentSearch && (
+                    <button
+                      onClick={handleClearSearch}
+                      className="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 focus:outline-none focus:ring-2 focus:ring-gray-500"
+                    >
+                      초기화
+                    </button>
+                  )}
+                </div>
+                {currentSearch && (
+                  <div className="mt-3 text-sm text-gray-600">
+                    검색 결과: <span className="font-medium">{currentSearch}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </>
+        )}
+
+        {/* 댓글 관리 탭 */}
+        {activeTab === 'comments' && (
+          <>
+            {/* 댓글 목록 */}
+            <div className="bg-white shadow overflow-hidden sm:rounded-md">
+              <div className="px-4 py-5 sm:px-6">
+                <h3 className="text-lg leading-6 font-medium text-gray-900">댓글 목록</h3>
+              </div>
+              
+              {isLoading ? (
+                <div className="px-4 py-8 text-center text-gray-500">로딩 중...</div>
+              ) : comments.length === 0 ? (
+                <div className="px-4 py-8 text-center text-gray-500">댓글이 없습니다.</div>
+              ) : (
+                <ul className="divide-y divide-gray-200">
+                  {comments.map((comment) => (
+                    <li key={comment.id} className="px-4 py-4">
+                      <div className="flex items-start space-x-3">
+                        <img
+                          className="h-10 w-10 rounded-full"
+                          src={comment.author_avatar}
+                          alt={comment.author_name}
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center space-x-2">
+                            <p className="text-sm font-medium text-gray-900">
+                              {comment.author_name}
+                            </p>
+                            {comment.is_bot && (
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                봇
+                              </span>
+                            )}
+                            <span className="text-sm text-gray-500">
+                              {new Date(comment.created_at).toLocaleString('ko-KR')}
+                            </span>
+                          </div>
+                          <p className="text-sm text-gray-700 mt-1">{comment.content}</p>
+                          <p className="text-xs text-gray-500 mt-1">포스트: {comment.post_id}</p>
+                        </div>
+                        <div className="flex-shrink-0">
+                          <button
+                            onClick={() => handleDeleteComment(comment.id)}
+                            className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm"
+                          >
+                            삭제
+                          </button>
+                        </div>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
               )}
             </div>
-            {currentSearch && (
-              <div className="mt-3 text-sm text-gray-600">
-                검색 결과: <span className="font-medium">{currentSearch}</span>
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* 댓글 목록 */}
-        <div className="bg-white shadow overflow-hidden sm:rounded-md">
-          <div className="px-4 py-5 sm:px-6">
-            <h3 className="text-lg leading-6 font-medium text-gray-900">댓글 목록</h3>
-          </div>
-          
-          {isLoading ? (
-            <div className="px-4 py-8 text-center text-gray-500">로딩 중...</div>
-          ) : comments.length === 0 ? (
-            <div className="px-4 py-8 text-center text-gray-500">댓글이 없습니다.</div>
-          ) : (
-            <ul className="divide-y divide-gray-200">
-              {comments.map((comment) => (
-                <li key={comment.id} className="px-4 py-4">
-                  <div className="flex items-start space-x-3">
-                    <img
-                      className="h-10 w-10 rounded-full"
-                      src={comment.author_avatar}
-                      alt={comment.author_name}
-                    />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center space-x-2">
-                        <p className="text-sm font-medium text-gray-900">
-                          {comment.author_name}
-                        </p>
-                        {comment.is_bot && (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                            봇
-                          </span>
-                        )}
-                        <span className="text-sm text-gray-500">
-                          {new Date(comment.created_at).toLocaleString('ko-KR')}
-                        </span>
-                      </div>
-                      <p className="text-sm text-gray-700 mt-1">{comment.content}</p>
-                      <p className="text-xs text-gray-500 mt-1">포스트: {comment.post_id}</p>
-                    </div>
-                    <div className="flex-shrink-0">
-                      <button
-                        onClick={() => handleDeleteComment(comment.id)}
-                        className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-sm"
-                      >
-                        삭제
-                      </button>
-                    </div>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+          </>
+        )}
 
         {/* 페이지네이션 */}
-        {pagination.totalPages > 1 && (
+        {activeTab === 'comments' && pagination.totalPages > 1 && (
           <div className="mt-6 flex items-center justify-between">
             <div className="flex-1 flex justify-between sm:hidden">
               <button
@@ -399,6 +531,174 @@ export default function AdminDashboardPage() {
                 </nav>
               </div>
             </div>
+          </div>
+        )}
+
+        {/* AI 봇 트리거 결과 알림 */}
+        {botTriggerResult && (
+          <div className={`fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg ${
+            botTriggerResult.success 
+              ? 'bg-green-100 border border-green-400 text-green-700' 
+              : 'bg-red-100 border border-red-400 text-red-700'
+          }`}>
+            <div className="flex items-center justify-between">
+              <div>
+                <h4 className="font-medium">
+                  {botTriggerResult.success ? '✅ AI 봇 트리거 성공' : '❌ AI 봇 트리거 실패'}
+                </h4>
+                <p className="text-sm mt-1">{botTriggerResult.message}</p>
+                {botTriggerResult.success && (
+                  <div className="text-xs mt-2 space-y-1">
+                    <p><strong>선택된 봇:</strong> {botTriggerResult.data.selected_bot.nickname}</p>
+                    <p><strong>봇 이름:</strong> {botTriggerResult.data.selected_bot.name}</p>
+                    <p><strong>선택 이유:</strong> {botTriggerResult.data.selected_bot.selection_reason}</p>
+                    <p><strong>댓글 타입:</strong> {botTriggerResult.data.generated_comment.parent_id ? '대댓글' : '새 댓글'}</p>
+                    {botTriggerResult.data.generated_comment.parent_id && (
+                                              <p><strong>대댓글 대상:</strong> {botTriggerResult.data.selected_bot.replyTargetNickname || botTriggerResult.data.selected_bot.replyTargetId || '알 수 없음'}</p>
+                    )}
+                    <div className="mt-2">
+                      <p className="font-medium text-blue-600">생성된 댓글:</p>
+                      <div className="bg-gray-50 p-3 rounded border text-sm max-h-32 overflow-y-auto">
+                        {botTriggerResult.data.generated_comment.content}
+                      </div>
+                    </div>
+                    <div className="mt-2">
+                      <p className="font-medium text-green-600">사용 가능한 페르소나:</p>
+                      {botTriggerResult.data.available_personas.map((persona, index) => (
+                        <p key={index} className="text-xs">
+                          {persona.nickname} ({persona.name}) - {persona.lang}
+                        </p>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+              <button
+                onClick={() => setBotTriggerResult(null)}
+                className="ml-4 text-gray-400 hover:text-gray-600"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* 포스트 목록 탭 */}
+        {activeTab === 'posts' && (
+          <div className="bg-white shadow overflow-hidden sm:rounded-md">
+            <div className="px-4 py-5 sm:px-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg leading-6 font-medium text-gray-900">포스트 목록</h3>
+                  <p className="text-sm text-gray-500 mt-1">
+                    전체 포스트와 댓글 현황을 확인할 수 있습니다.
+                  </p>
+                  {postsStats.length > 0 && (
+                    <div className="flex items-center space-x-4 mt-2 text-sm text-gray-600">
+                      <span className="flex items-center">
+                        <span className="w-2 h-2 bg-blue-500 rounded-full mr-2"></span>
+                        총 {postsStats.length}개 포스트
+                      </span>
+                      <span className="flex items-center">
+                        <span className="w-2 h-2 bg-green-500 rounded-full mr-2"></span>
+                        총 {postsStats.reduce((sum, post) => sum + post.commentCount, 0)}개 댓글
+                      </span>
+                      <span className="flex items-center">
+                        <span className="w-2 h-2 bg-yellow-500 rounded-full mr-2"></span>
+                        댓글 있는 포스트 {postsStats.filter(post => post.hasComments).length}개
+                      </span>
+                    </div>
+                  )}
+                </div>
+                {postsStats.length > 0 && (
+                  <div className="text-sm text-gray-500">
+                    마지막 업데이트: {new Date(postsStats[0]?.lastModified).toLocaleDateString('ko-KR')}
+                  </div>
+                )}
+              </div>
+            </div>
+            
+            {postsLoading ? (
+              <div className="px-4 py-8 text-center text-gray-500">로딩 중...</div>
+            ) : postsStats.length === 0 ? (
+              <div className="px-4 py-8 text-center text-gray-500">포스트가 없습니다.</div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        포스트 ID
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        카테고리
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        언어
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        댓글 수
+                      </th>
+                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        작업
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {postsStats.map((post) => (
+                      <tr key={post.postId} className="hover:bg-gray-50">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                          <a 
+                            href={post.url} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-indigo-600 hover:text-indigo-900"
+                          >
+                            {post.postId}
+                          </a>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            {post.category}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            post.language === 'ko' 
+                              ? 'bg-green-100 text-green-800' 
+                              : 'bg-yellow-100 text-yellow-800'
+                          }`}>
+                            {post.language === 'ko' ? '한국어' : '일본어'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            post.commentCount > 0 
+                              ? 'bg-green-100 text-green-800' 
+                              : 'bg-gray-100 text-gray-800'
+                          }`}>
+                            {post.commentCount}개
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                          <button
+                            onClick={() => triggerBotForPost(post.postId)}
+                            disabled={botTriggerLoading === post.postId}
+                            className={`px-3 py-1 rounded text-sm ${
+                              botTriggerLoading === post.postId
+                                ? 'bg-gray-400 cursor-not-allowed'
+                                : 'bg-indigo-600 hover:bg-indigo-700'
+                            } text-white`}
+                          >
+                            {botTriggerLoading === post.postId ? '생성 중...' : 'AI 봇 트리거'}
+                          </button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         )}
       </div>
