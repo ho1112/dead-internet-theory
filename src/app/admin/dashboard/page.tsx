@@ -166,7 +166,7 @@ export default function AdminDashboardPage() {
       <div className="bg-white shadow">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-6">
-            <h1 className="text-3xl font-bold text-gray-900">댓글 관리 대시보드</h1>
+            <h1 className="text-3xl font-bold text-gray-900">Dead Internet Theory - 댓글 관리</h1>
             <div className="flex space-x-4">
               <button
                 onClick={() => router.push('/admin/posts')}
