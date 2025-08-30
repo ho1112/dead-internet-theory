@@ -104,3 +104,20 @@ CREATE POLICY "봇 페르소나는 누구나 읽을 수 있음" ON dev_bot_perso
 -- 개발용 관리자 사용자 테이블 정책
 CREATE POLICY "관리자만 접근 가능" ON dev_admin_users
   FOR ALL USING (false); -- API를 통해서만 접근
+
+-- 개발용 스케줄된 작업 테이블
+CREATE TABLE dev_scheduled_jobs (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,                    -- 작업 고유 식별자
+  post_id VARCHAR(255) NOT NULL,                                   -- 블로그 포스트 ID (예: ko/weekly/250823)
+  url TEXT NOT NULL,                                               -- 블로그 포스트 전체 URL
+  execution_time TIMESTAMP WITH TIME ZONE NOT NULL,                -- 봇 댓글을 생성할 예정 시간
+  status VARCHAR(50) DEFAULT 'pending' CHECK (status IN ('pending', 'completed')), -- 작업 상태 (대기/완료)
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),               -- 작업 생성 시간
+  executed_at TIMESTAMP WITH TIME ZONE,                            -- 실제 실행 완료 시간
+  error_message TEXT                                               -- 오류 발생 시 메시지 (선택사항)
+);
+
+-- 개발용 스케줄된 작업 테이블 인덱스
+CREATE INDEX idx_dev_scheduled_jobs_execution_time ON dev_scheduled_jobs(execution_time);
+CREATE INDEX idx_dev_scheduled_jobs_status ON dev_scheduled_jobs(status);
+CREATE INDEX idx_dev_scheduled_jobs_post_id ON dev_scheduled_jobs(post_id);
