@@ -75,7 +75,8 @@ export async function POST(request: NextRequest) {
           nickname: aiResult.selectedPersona.nickname,
           name: aiResult.selectedPersona.name,
           selection_reason: aiResult.selectionReason,
-          replyTargetId: aiResult.replyTargetId || null
+          replyTargetId: aiResult.replyTargetId || null,
+          replyTargetNickname: aiResult.replyTargetNickname || null
         },
         generated_comment: aiResult.savedComment,
         available_personas: aiResult.availablePersonas
@@ -209,6 +210,7 @@ async function generateCommentWithSmartAI(
   savedComment: Comment;
   selectionReason: string;
   replyTargetId: string | null;
+  replyTargetNickname: string | null;
   availablePersonas: Array<{
     name: string;
     nickname: string;
@@ -229,7 +231,7 @@ async function generateCommentWithSmartAI(
 
     // 2. AI에게 모든 정보를 전달하여 봇 선택과 댓글 생성을 한 번에 처리
     const prompt = `
-당신은 블로그 포스트에 댓글을 달 AI 연출가이자 배우입니다.
+당신은 블로그 포스트에 댓글을 달 AI 페르소나입니다.
 
 ## 상황 정보
 포스트 ID: ${postId}
@@ -249,10 +251,16 @@ ${analyzeConversationStructure(existingComments)}
 ## 선택 가능한 페르소나들 (${postLanguage} 언어)
 ${personas.map((p, index) => `${index + 1}. ${p.nickname} (${p.name}): ${p.system_prompt}`).join('\n\n')}
 
-## 지시사항
-이 상황을 분석하여:
-1. 가장 적합한 페르소나를 선택하고
-2. 그 페르소나의 성격과 말투로 맥락에 맞는 댓글을 작성하세요
+## 💡 자연스러운 대화를 위한 가이드
+
+**자기 인식 및 맥락 유지**:
+- 이미 댓글을 작성한 페르소나라면, 이전 댓글과 연결되는 맥락으로 작성하는 것이 자연스럽습니다.
+- 하지만 너무 강제적으로 연결하려 하지 말고, 자연스러운 흐름으로 이어가세요.
+- 다른 봇이나 사람의 의견에 자연스럽게 반응하며, 토론의 흐름을 이어가세요.
+
+**연속성 표현 예시 (선택사항)**:
+- "앞서 언급했던...", "제가 좋아했던...", "이전에 우려했던..."
+- 자연스럽게 떠오르는 표현을 사용하세요.
 
 **댓글 타입 결정 규칙**:
 - **reply**: 특정 댓글에 직접 반응하는 경우 (예: @코드수리공님, @신기술너무좋아님)
@@ -279,7 +287,8 @@ ${personas.map((p, index) => `${index + 1}. ${p.nickname} (${p.name}): ${p.syste
 선택된 페르소나: [페르소나명]
 선택 이유: [왜 이 페르소나를 선택했는지]
 댓글 타입: [new_comment 또는 reply - @[사용자명]으로 시작하면 반드시 reply]
-대댓글 대상: [reply인 경우 반응할 댓글의 ID (UUID), new_comment인 경우 비워두기]
+대댓글 대상 ID: [reply인 경우 반응할 댓글의 ID (UUID), new_comment인 경우 비워두기]
+대댓글 대상 닉네임: [reply인 경우 반응할 댓글의 작성자 닉네임, new_comment인 경우 비워두기]
 댓글: [실제 댓글 내용]
 `;
 
@@ -311,7 +320,8 @@ ${personas.map((p, index) => `${index + 1}. ${p.nickname} (${p.name}): ${p.syste
     let selectedPersonaName = '';
     let selectionReason = '';
     let commentType = 'new_comment';
-    let replyTargetId = null;
+    let replyTargetId = null;        // UUID (DB 연결용)
+    let replyTargetNickname = null;  // 닉네임 (표시용)
     let comment = '';
 
     // 각 필드 추출
@@ -323,9 +333,12 @@ ${personas.map((p, index) => `${index + 1}. ${p.nickname} (${p.name}): ${p.syste
       } else if (line.startsWith('댓글 타입:')) {
         const extractedType = line.replace('댓글 타입:', '').trim();
         commentType = extractedType;
-      } else if (line.startsWith('대댓글 대상:') && !replyTargetId) {
-        const target = line.replace('대댓글 대상:', '').trim();
+      } else if (line.startsWith('대댓글 대상 ID:') && !replyTargetId) {
+        const target = line.replace('대댓글 대상 ID:', '').trim();
         replyTargetId = target && target !== '비워두기' ? target : null;
+      } else if (line.startsWith('대댓글 대상 닉네임:') && !replyTargetNickname) {
+        const nickname = line.replace('대댓글 대상 닉네임:', '').trim();
+        replyTargetNickname = nickname && nickname !== '비워두기' ? nickname : null;
       }
     }
     
@@ -336,14 +349,13 @@ ${personas.map((p, index) => `${index + 1}. ${p.nickname} (${p.name}): ${p.syste
       const commentLines = lines.slice(commentStartIndex + 1);
       comment = commentLines.join('\n').trim();
     }
-    
 
-    
     // 중요 정보 로그 (모니터링용)
     console.log('AI 봇 선택 결과:');
     console.log('- 선택된 페르소나:', selectedPersonaName);
     console.log('- 댓글 타입:', commentType);
-    console.log('- 대댓글 대상:', replyTargetId || '없음');
+    console.log('- 대댓글 대상 ID (UUID):', replyTargetId || '없음');
+    console.log('- 대댓글 대상 닉네임:', replyTargetNickname || '없음');
     console.log('- 생성된 댓글 길이:', comment.length, '자');
 
     // 5. 선택된 페르소나 찾기
@@ -380,6 +392,7 @@ ${personas.map((p, index) => `${index + 1}. ${p.nickname} (${p.name}): ${p.syste
       savedComment,
       selectionReason,
       replyTargetId,
+      replyTargetNickname,
       availablePersonas: personas.map((p) => ({
         name: p.name,
         nickname: p.nickname,

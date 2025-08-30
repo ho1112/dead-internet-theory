@@ -13,6 +13,7 @@ interface BotTriggerResponse {
       name: string;
       selection_reason: string;
       replyTargetId?: string;
+      replyTargetNickname?: string;
     };
     generated_comment: Comment;
     available_personas: Array<{
@@ -553,7 +554,7 @@ export default function AdminDashboardPage() {
                     <p><strong>선택 이유:</strong> {botTriggerResult.data.selected_bot.selection_reason}</p>
                     <p><strong>댓글 타입:</strong> {botTriggerResult.data.generated_comment.parent_id ? '대댓글' : '새 댓글'}</p>
                     {botTriggerResult.data.generated_comment.parent_id && (
-                      <p><strong>대댓글 대상:</strong> {botTriggerResult.data.selected_bot.replyTargetId || '알 수 없음'}</p>
+                                              <p><strong>대댓글 대상:</strong> {botTriggerResult.data.selected_bot.replyTargetNickname || botTriggerResult.data.selected_bot.replyTargetId || '알 수 없음'}</p>
                     )}
                     <div className="mt-2">
                       <p className="font-medium text-blue-600">생성된 댓글:</p>
