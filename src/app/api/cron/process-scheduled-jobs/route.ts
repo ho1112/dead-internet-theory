@@ -70,8 +70,9 @@ export async function GET(request: NextRequest) {
 
       } catch (error) {
         // 오류 발생: 그냥 pending 상태로 두고 다음에 다시 시도
-        console.error(`작업 오류: ${job.id}`, error.message);
-        results.push({ job_id: job.id, status: 'failed', error: error.message });
+        const errorMessage = error instanceof Error ? error.message : String(error);
+        console.error(`작업 오류: ${job.id}`, errorMessage);
+        results.push({ job_id: job.id, status: 'failed', error: errorMessage });
       }
     }
 
@@ -83,9 +84,10 @@ export async function GET(request: NextRequest) {
     });
 
   } catch (error) {
-    console.error('Cron Job 처리 오류:', error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error('Cron Job 처리 오류:', errorMessage);
     return NextResponse.json(
-      { success: false, message: `Cron Job 처리 실패: ${error}` },
+      { success: false, message: `Cron Job 처리 실패: ${errorMessage}` },
       { status: 500 }
     );
   }
