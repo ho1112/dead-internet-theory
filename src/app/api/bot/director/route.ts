@@ -451,8 +451,8 @@ async function scheduleNextComment(
       return;
     }
 
-    // 기존 로직과 일관성 유지: 1분~3시간 랜덤 지연
-    const delayMinutes = Math.floor(Math.random() * (180 - 1 + 1)) + 1; // 1~180분
+    // 기존 로직과 일관성 유지: 1분~2시간 랜덤 지연
+    const delayMinutes = Math.floor(Math.random() * (120 - 1 + 1)) + 1; // 1~120분
     const delayMs = delayMinutes * 60 * 1000;
     const executionTime = new Date(Date.now() + delayMs);
 
