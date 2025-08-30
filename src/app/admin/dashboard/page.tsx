@@ -3,15 +3,35 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
+interface BotTriggerResponse {
+  success: boolean;
+  message: string;
+  data: {
+    selected_bot: {
+      id: string;
+      nickname: string;
+      name: string;
+      selection_reason: string;
+      replyTargetId?: string;
+    };
+    generated_comment: Comment;
+    available_personas: Array<{
+      name: string;
+      nickname: string;
+      lang: string;
+    }>;
+  };
+}
+
 interface Comment {
   id: string;
   content: string;
   author_name: string;
   author_avatar: string;
   is_bot: boolean;
+  parent_id: string | null;
   created_at: string;
   post_id: string;
-  status: string;
 }
 
 interface Pagination {
@@ -49,6 +69,8 @@ export default function AdminDashboardPage() {
   const [activeTab, setActiveTab] = useState<TabType>('comments');
   const [postsStats, setPostsStats] = useState<PostStats[]>([]);
   const [postsLoading, setPostsLoading] = useState(false);
+  const [botTriggerLoading, setBotTriggerLoading] = useState<string | null>(null);
+  const [botTriggerResult, setBotTriggerResult] = useState<BotTriggerResponse | null>(null);
   const router = useRouter();
 
   // 인증 상태 확인
@@ -85,6 +107,38 @@ export default function AdminDashboardPage() {
       setError('포스트 통계 조회 중 오류가 발생했습니다.');
     } finally {
       setPostsLoading(false);
+    }
+  };
+
+  // AI 봇 트리거
+  const triggerBotForPost = async (postId: string) => {
+    try {
+      setBotTriggerLoading(postId);
+      setBotTriggerResult(null);
+      
+      const response = await fetch('/api/bot/director', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ post_id: postId })
+      });
+
+      if (response.ok) {
+        const result: BotTriggerResponse = await response.json();
+        setBotTriggerResult(result);
+        
+        // 성공 시 댓글 목록 새로고침
+        if (activeTab === 'comments') {
+          fetchComments();
+        }
+      } else {
+        const errorData = await response.json();
+        alert(`AI 봇 트리거 실패: ${errorData.message}`);
+      }
+    } catch (error) {
+      console.error('AI 봇 트리거 오류:', error);
+      alert('AI 봇 트리거 중 오류가 발생했습니다.');
+    } finally {
+      setBotTriggerLoading(null);
     }
   };
 
@@ -479,6 +533,55 @@ export default function AdminDashboardPage() {
           </div>
         )}
 
+        {/* AI 봇 트리거 결과 알림 */}
+        {botTriggerResult && (
+          <div className={`fixed top-4 right-4 z-50 p-4 rounded-lg shadow-lg ${
+            botTriggerResult.success 
+              ? 'bg-green-100 border border-green-400 text-green-700' 
+              : 'bg-red-100 border border-red-400 text-red-700'
+          }`}>
+            <div className="flex items-center justify-between">
+              <div>
+                <h4 className="font-medium">
+                  {botTriggerResult.success ? '✅ AI 봇 트리거 성공' : '❌ AI 봇 트리거 실패'}
+                </h4>
+                <p className="text-sm mt-1">{botTriggerResult.message}</p>
+                {botTriggerResult.success && (
+                  <div className="text-xs mt-2 space-y-1">
+                    <p><strong>선택된 봇:</strong> {botTriggerResult.data.selected_bot.nickname}</p>
+                    <p><strong>봇 이름:</strong> {botTriggerResult.data.selected_bot.name}</p>
+                    <p><strong>선택 이유:</strong> {botTriggerResult.data.selected_bot.selection_reason}</p>
+                    <p><strong>댓글 타입:</strong> {botTriggerResult.data.generated_comment.parent_id ? '대댓글' : '새 댓글'}</p>
+                    {botTriggerResult.data.generated_comment.parent_id && (
+                      <p><strong>대댓글 대상:</strong> {botTriggerResult.data.selected_bot.replyTargetId || '알 수 없음'}</p>
+                    )}
+                    <div className="mt-2">
+                      <p className="font-medium text-blue-600">생성된 댓글:</p>
+                      <div className="bg-gray-50 p-3 rounded border text-sm max-h-32 overflow-y-auto">
+                        {botTriggerResult.data.generated_comment.content}
+                      </div>
+                    </div>
+                    <div className="mt-2">
+                      <p className="font-medium text-green-600">사용 가능한 페르소나:</p>
+                      {botTriggerResult.data.available_personas.map((persona, index) => (
+                        <p key={index} className="text-xs">
+                          {persona.nickname} ({persona.name}) - {persona.lang}
+                        </p>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+              <button
+                onClick={() => setBotTriggerResult(null)}
+                className="ml-4 text-gray-400 hover:text-gray-600"
+              >
+                ✕
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* 포스트 목록 탭 */}
         {activeTab === 'posts' && (
           <div className="bg-white shadow overflow-hidden sm:rounded-md">
@@ -578,13 +681,15 @@ export default function AdminDashboardPage() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                           <button
-                            onClick={() => {
-                              // TODO: AI 봇으로 댓글 생성 트리거
-                              alert(`${post.postId}에 AI 봇으로 댓글을 생성합니다.`);
-                            }}
-                            className="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1 rounded text-sm"
+                            onClick={() => triggerBotForPost(post.postId)}
+                            disabled={botTriggerLoading === post.postId}
+                            className={`px-3 py-1 rounded text-sm ${
+                              botTriggerLoading === post.postId
+                                ? 'bg-gray-400 cursor-not-allowed'
+                                : 'bg-indigo-600 hover:bg-indigo-700'
+                            } text-white`}
                           >
-                            AI 봇 트리거
+                            {botTriggerLoading === post.postId ? '생성 중...' : 'AI 봇 트리거'}
                           </button>
                         </td>
                       </tr>

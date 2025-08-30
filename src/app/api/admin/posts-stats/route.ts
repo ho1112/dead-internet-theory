@@ -60,8 +60,7 @@ export async function GET(request: NextRequest) {
     const tableNames = getTableNames()
     const { data: comments, error } = await supabase
       .from(tableNames.comments)
-      .select('post_id, status')
-      .eq('status', 'approved')
+      .select('post_id')
     
     if (error) {
       throw new Error(`댓글 조회 실패: ${error.message}`)
