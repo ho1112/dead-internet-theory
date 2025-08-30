@@ -249,7 +249,7 @@ ${existingComments.map(c => `- ID: ${c.id} | ${c.author_name} (${c.is_bot ? 'AI�
 ${analyzeConversationStructure(existingComments)}
 
 ## 선택 가능한 페르소나들 (${postLanguage} 언어)
-${personas.map((p, index) => `${index + 1}. ${p.nickname} (${p.name}): ${p.system_prompt}`).join('\n\n')}
+${personas.map((p, index) => `${index + 1}. ${p.nickname}: ${p.system_prompt}`).join('\n\n')}
 
 ## 💡 자연스러운 대화를 위한 가이드
 
@@ -343,8 +343,6 @@ ${personas.map((p, index) => `${index + 1}. ${p.nickname} (${p.name}): ${p.syste
       throw new Error('Gemini API 응답에서 텍스트를 추출할 수 없습니다.');
     }
 
-
-
     // 4. AI 응답 파싱
     const lines = generatedText.split('\n');
     
@@ -418,6 +416,9 @@ ${personas.map((p, index) => `${index + 1}. ${p.nickname} (${p.name}): ${p.syste
       throw new Error(`댓글 저장 실패: ${saveError.message}`);
     }
 
+    // 7. 추가 댓글 예약 (대화 활성화를 위해)
+    await scheduleNextComment(tableNames, postId, existingComments.length + 1);
+
     return {
       selectedPersona,
       savedComment,
@@ -434,5 +435,46 @@ ${personas.map((p, index) => `${index + 1}. ${p.nickname} (${p.name}): ${p.syste
   } catch (error) {
     console.error('AI 스마트 생성 에러:', error);
     return null;
+  }
+}
+
+// 추가 댓글 예약 함수
+async function scheduleNextComment(
+  tableNames: ReturnType<typeof getTableNames>,
+  postId: string,
+  currentCommentCount: number
+): Promise<void> {
+  try {
+    // 봇 댓글 수 제한 확인 (최대 20개)
+    if (currentCommentCount >= 20) {
+      console.log(`봇 댓글 수 제한에 도달: ${currentCommentCount}/20`);
+      return;
+    }
+
+    // 기존 로직과 일관성 유지: 1분~3시간 랜덤 지연
+    const delayMinutes = Math.floor(Math.random() * (180 - 1 + 1)) + 1; // 1~180분
+    const delayMs = delayMinutes * 60 * 1000;
+    const executionTime = new Date(Date.now() + delayMs);
+
+    // scheduled_jobs에 추가 작업 예약
+    const { error: scheduleError } = await supabase
+      .from(tableNames.scheduledJobs || 'scheduled_jobs')
+      .insert({
+        id: crypto.randomUUID(),
+        post_id: postId,
+        url: `https://mintora.me/blog/${postId}`,
+        execution_time: executionTime.toISOString(),
+        status: 'pending',
+        created_at: new Date().toISOString()
+      });
+
+    if (scheduleError) {
+      console.error('추가 댓글 예약 실패:', scheduleError);
+    } else {
+      console.log(`다음 댓글 예약 완료: ${delayMinutes}분 후 (${currentCommentCount + 1}번째)`);
+    }
+
+  } catch (error) {
+    console.error('추가 댓글 예약 중 오류:', error);
   }
 }
