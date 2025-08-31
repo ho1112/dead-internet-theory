@@ -406,7 +406,7 @@ ${personas.map((p, index) => `${index + 1}. ${p.nickname}: ${p.system_prompt}`).
         author_name: selectedPersona.nickname,
         author_avatar: selectedPersona.avatar,
         is_bot: true,
-        parent_id: commentType === 'reply' && replyTargetId ? replyTargetId : null,
+        parent_id: commentType === 'reply' && replyTargetId ? await getTopLevelParentId(tableNames, replyTargetId) : null,
         post_id: postId
       })
       .select()
@@ -476,5 +476,36 @@ async function scheduleNextComment(
 
   } catch (error) {
     console.error('추가 댓글 예약 중 오류:', error);
+  }
+}
+
+// 최상위 부모 댓글 ID를 찾는 함수
+async function getTopLevelParentId(
+  tableNames: ReturnType<typeof getTableNames>,
+  commentId: string
+): Promise<string> {
+  try {
+    let currentId = commentId;
+    
+    // 최상위 부모 댓글을 찾을 때까지 반복
+    while (true) {
+      const { data: comment, error } = await supabase
+        .from(tableNames.comments)
+        .select('parent_id')
+        .eq('id', currentId)
+        .single();
+      
+      if (error || !comment || !comment.parent_id) {
+        // 더 이상 부모가 없으면 현재 ID가 최상위 부모
+        return currentId;
+      }
+      
+      // 부모가 있으면 계속 위로 올라감
+      currentId = comment.parent_id;
+    }
+  } catch (error) {
+    console.error('최상위 부모 ID 찾기 실패:', error);
+    // 에러 발생 시 원래 ID 반환
+    return commentId;
   }
 }

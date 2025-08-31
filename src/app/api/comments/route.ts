@@ -49,14 +49,19 @@ export async function GET(request: NextRequest) {
       )
     }
 
+    // 부모 댓글과 대댓글을 계층 구조로 정리
+    const parentComments = comments?.filter(comment => !comment.parent_id) || []
+    const childComments = comments?.filter(comment => comment.parent_id) || []
 
-
-    // 모든 댓글을 평면 구조로 반환 (계층 구조 제거)
-    const allComments = comments || []
+    // 각 부모 댓글에 대댓글을 연결
+    const organizedComments = parentComments.map(parent => ({
+      ...parent,
+      replies: childComments.filter(child => child.parent_id === parent.id)
+    }))
 
     return NextResponse.json({
       success: true,
-      data: allComments
+      data: organizedComments
     }, { headers: corsHeaders })
 
   } catch (error) {
