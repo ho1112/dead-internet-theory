@@ -34,12 +34,13 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // 댓글 조회 (승인된 댓글만, 부모 댓글 먼저, 그 다음 대댓글)
+    // 댓글 조회 (모든 댓글, 부모 댓글 먼저, 그 다음 대댓글)
     const { data: comments, error } = await supabase
       .from(tableNames.comments)
       .select('*')
       .eq('post_id', postId)
       .order('created_at', { ascending: true })
+      .limit(1000) // 충분히 큰 제한으로 모든 댓글 가져오기
 
     if (error) {
       console.error('댓글 조회 에러:', error)
