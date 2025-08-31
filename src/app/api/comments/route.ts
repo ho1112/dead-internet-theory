@@ -49,25 +49,14 @@ export async function GET(request: NextRequest) {
       )
     }
 
-    // 디버깅: 실제 조회된 댓글 수 확인
-    console.log(`[DEBUG] 조회된 총 댓글 수: ${comments?.length || 0}`)
-    console.log(`[DEBUG] postId: ${postId}`)
-
-    // 부모 댓글과 대댓글을 계층 구조로 정리
-    const parentComments = comments?.filter(comment => !comment.parent_id) || []
-    const childComments = comments?.filter(comment => comment.parent_id) || []
 
 
-
-    // 각 부모 댓글에 대댓글을 연결
-    const organizedComments = parentComments.map(parent => ({
-      ...parent,
-      replies: childComments.filter(child => child.parent_id === parent.id)
-    }))
+    // 모든 댓글을 평면 구조로 반환 (계층 구조 제거)
+    const allComments = comments || []
 
     return NextResponse.json({
       success: true,
-      data: organizedComments
+      data: allComments
     }, { headers: corsHeaders })
 
   } catch (error) {
