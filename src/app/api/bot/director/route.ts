@@ -343,10 +343,6 @@ ${personas.map((p, index) => `${index + 1}. ${p.nickname}: ${p.system_prompt}`).
       throw new Error('Gemini API 응답에서 텍스트를 추출할 수 없습니다.');
     }
 
-    // 디버깅: AI 응답 원본 로깅
-    console.log('=== AI 응답 원본 ===');
-    console.log(generatedText);
-    console.log('=== AI 응답 끝 ===');
 
     // 4. AI 응답 파싱
     const lines = generatedText.split('\n');
@@ -378,29 +374,20 @@ ${personas.map((p, index) => `${index + 1}. ${p.nickname}: ${p.system_prompt}`).
     
     // 댓글은 "댓글:" 다음부터 끝까지 모든 내용을 가져오기
     const commentStartIndex = lines.findIndex((line: string) => line.startsWith('댓글:'));
-    console.log('댓글 시작 인덱스:', commentStartIndex);
     
     if (commentStartIndex !== -1) {
       const commentLine = lines[commentStartIndex];
-      console.log('댓글 라인 원본:', commentLine);
       
       // "댓글:" 다음 내용 추출 (같은 줄에 있을 수 있음)
       if (commentLine.includes('댓글:')) {
         comment = commentLine.split('댓글:')[1].trim();
-        console.log('같은 줄에서 추출된 댓글:', comment);
       }
       
       // 만약 같은 줄에 댓글이 없으면 다음 줄들 확인
       if (!comment || comment.length === 0) {
         const commentLines = lines.slice(commentStartIndex + 1);
         comment = commentLines.join('\n').trim();
-        console.log('다음 줄들에서 추출된 댓글:', comment);
       }
-      
-      console.log('최종 댓글 내용:', comment);
-    } else {
-      console.log('댓글: 시작 라인을 찾을 수 없음');
-      console.log('모든 라인들:', lines);
     }
 
     // 중요 정보 로그 (모니터링용)
@@ -410,6 +397,7 @@ ${personas.map((p, index) => `${index + 1}. ${p.nickname}: ${p.system_prompt}`).
     console.log('- 대댓글 대상 ID (UUID):', replyTargetId || '없음');
     console.log('- 대댓글 대상 닉네임:', replyTargetNickname || '없음');
     console.log('- 생성된 댓글 길이:', comment.length, '자');
+    console.log('- 생성된 댓글 미리보기:', comment.substring(0, 100) + (comment.length > 100 ? '...' : ''));
 
     // 5. 선택된 페르소나 찾기
     const selectedPersona = personas.find((p) => p.nickname === selectedPersonaName);
