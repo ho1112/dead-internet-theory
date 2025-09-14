@@ -381,10 +381,22 @@ ${personas.map((p, index) => `${index + 1}. ${p.nickname}: ${p.system_prompt}`).
     console.log('댓글 시작 인덱스:', commentStartIndex);
     
     if (commentStartIndex !== -1) {
-      // "댓글:" 다음 줄부터 끝까지 모든 내용을 합치기
-      const commentLines = lines.slice(commentStartIndex + 1);
-      comment = commentLines.join('\n').trim();
-      console.log('추출된 댓글 라인들:', commentLines);
+      const commentLine = lines[commentStartIndex];
+      console.log('댓글 라인 원본:', commentLine);
+      
+      // "댓글:" 다음 내용 추출 (같은 줄에 있을 수 있음)
+      if (commentLine.includes('댓글:')) {
+        comment = commentLine.split('댓글:')[1].trim();
+        console.log('같은 줄에서 추출된 댓글:', comment);
+      }
+      
+      // 만약 같은 줄에 댓글이 없으면 다음 줄들 확인
+      if (!comment || comment.length === 0) {
+        const commentLines = lines.slice(commentStartIndex + 1);
+        comment = commentLines.join('\n').trim();
+        console.log('다음 줄들에서 추출된 댓글:', comment);
+      }
+      
       console.log('최종 댓글 내용:', comment);
     } else {
       console.log('댓글: 시작 라인을 찾을 수 없음');
