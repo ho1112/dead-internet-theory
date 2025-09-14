@@ -343,6 +343,11 @@ ${personas.map((p, index) => `${index + 1}. ${p.nickname}: ${p.system_prompt}`).
       throw new Error('Gemini API 응답에서 텍스트를 추출할 수 없습니다.');
     }
 
+    // 디버깅: AI 응답 원본 로깅
+    console.log('=== AI 응답 원본 ===');
+    console.log(generatedText);
+    console.log('=== AI 응답 끝 ===');
+
     // 4. AI 응답 파싱
     const lines = generatedText.split('\n');
     
@@ -373,10 +378,17 @@ ${personas.map((p, index) => `${index + 1}. ${p.nickname}: ${p.system_prompt}`).
     
     // 댓글은 "댓글:" 다음부터 끝까지 모든 내용을 가져오기
     const commentStartIndex = lines.findIndex((line: string) => line.startsWith('댓글:'));
+    console.log('댓글 시작 인덱스:', commentStartIndex);
+    
     if (commentStartIndex !== -1) {
       // "댓글:" 다음 줄부터 끝까지 모든 내용을 합치기
       const commentLines = lines.slice(commentStartIndex + 1);
       comment = commentLines.join('\n').trim();
+      console.log('추출된 댓글 라인들:', commentLines);
+      console.log('최종 댓글 내용:', comment);
+    } else {
+      console.log('댓글: 시작 라인을 찾을 수 없음');
+      console.log('모든 라인들:', lines);
     }
 
     // 중요 정보 로그 (모니터링용)
