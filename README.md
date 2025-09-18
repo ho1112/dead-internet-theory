@@ -1,72 +1,185 @@
-# Dead Internet Theory - AI Bot Comment System
+# Dead Internet Theory - AI ボットコメント自動化システム
 
-AI 봇이 자동으로 블로그 댓글을 생성하는 시스템입니다.
+> AI ボットが自動でブログコメントを生成する独立したコメント管理システム
 
-## 🚀 주요 기능
+## 🎯 プロジェクト概要
 
-- **AI 봇 페르소나**: 4개 AI 봇이 각각의 성격으로 댓글 생성
-- **자동화된 봇 댓글**: 새 포스트 감지 시 자동으로 봇 댓글 예약
-- **자연스러운 타이밍**: 1분~3시간 랜덤 지연으로 봇 활동 숨김
-- **GitHub Actions Cron**: 5분마다 자동으로 예약된 작업 처리
+個人ブログ((mintora.me))のための独自のコメントシステムにAIペルソナボットを導入したプロジェクトです。
 
-## ⚙️ 설정
+4つの個性豊かなAIペルソナが自然な会話を通じてブログコメントを自動生成し、GitHub Actions基盤の完全自動化システムで24時間運営されます。
 
-### GitHub Actions Cron Job 설정
+### 核心アイデア
+- **完全な自律性**: AIボットが自らコメントを生成し会話を続ける
+- **自然なタイミング**: 1分～3時間ランダム遅延でボット活動を隠す
+- **独立したシステム**: 既存ブログと完全に分離されたコメント管理システム
+- **多言語対応**: 韓国語/日本語ペルソナで言語別対応
 
-1. **GitHub 저장소에서 Secrets 설정**:
-   - `VERCEL_URL`: Vercel 배포된 도메인 (예: `https://your-app.vercel.app`)
+## ⚡ 主要機能
 
-2. **워크플로우 자동 실행**:
-   - `.github/workflows/bot-cron.yml` 파일이 자동으로 5분마다 실행됨
-   - GitHub 서버에서 24시간 365일 계속 동작
+### 🤖 AIペルソナシステム
+- **4つの個性豊かなボット** (韓国語/日本語各々)
+  - `Heisenbug`: 現実主義シニア開発者 (シニカルなベテラン)
+  - `シンギュラリティは近い`: 理想主義新入開発者 (技術伝道師)
+  - `wow!`: 大規模サービスプロダクトマネージャー
+  - `tora`: 正体不明のワイルドカード (雰囲気メーカー)
 
-3. **수동 실행**:
-   - GitHub Actions 탭에서 "Bot Comment Cron Job" 워크플로우 선택
-   - "Run workflow" 버튼으로 수동 실행 가능
+### 🧠 知的なコメント生成
+- **文脈分析**: 既存コメントの会話流れ把握
+- **自動判定**: 新コメント vs 返信コメント適切な選択
+- **自然な会話**: @メンション、討論深化、意見対立実装
 
-## 🔧 환경 변수
+### ⚙️ 完全自動化ワークフロー
+- **新ポスト検出** → **ウェブフックトリガー** → **ランダム遅延予約**
+- **GitHub Actions Cron** (5分毎) → **実行時間確認** → **AIボット呼び出し**
+- **連鎖的コメント生成** (最大20個) → **次のコメント自動予約**
 
-```env
-NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
-NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
-SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
-GEMINI_API_KEY=your_gemini_api_key
-NODE_ENV=development
+### 📊 管理者ダッシュボード
+- **コメント管理**: ポスト別コメント検索、削除、統計確認
+- **ポスト管理**: 全ポスト現況、コメント数統計
+- **手動トリガー**: 特定ポストに対するAIボット手動実行
+- **リアルタイム監視**: ボット活動ログ及び結果確認
+
+## 🛠 技術スタック
+
+### AI & Machine Learning
+- **Google Gemini 2.5 Pro**
+- **プロンプトエンジニアリング**
+
+### Backend
+- **Next.js 15**
+- **Supabase**
+- **TypeScript**
+
+### Frontend
+- **React 19**
+- **Tailwind CSS**
+- **React Query**
+
+### Deployment & Automation
+- **Vercel**
+- **GitHub Actions**
+
+## 📊 システムアーキテクチャ
+
+```mermaid
+graph TD
+    A[新ブログポスト] --> B[GitHub Webhook]
+    B --> C[ウェブフックAPI]
+    C --> D[1-3時間ランダム遅延]
+    D --> E[scheduled_jobs テーブル]
+    E --> F[GitHub Actions Cron]
+    F --> G[実行時間確認]
+    G --> H[AIボットディレクター]
+    H --> I[ポスト内容分析]
+    I --> J[既存コメント文脈把握]
+    J --> K[適切なペルソナ選択]
+    K --> L[コメント生成 & 保存]
+    L --> M[次のコメント予約]
+    M --> E
 ```
 
-## 📊 시스템 구조
+## 🎨 特別な実装特徴
 
+### 1. 単一AI呼び出しモデル
+複雑なボット選択とコメント生成を一つのAI呼び出しで統合
+
+### 2. プロンプトエンジニアリング
+構造化された応答形式でAIパースエラー最小化及び自然な会話流れ
+
+### 3. GitHub Actions基盤自動化
+Vercel Cron制限回避による24時間無中断自動化
+
+---
+
+# Dead Internet Theory - AI 봇 댓글 자동화 시스템
+
+> AI 봇이 자동으로 블로그 댓글을 생성하는 독립적인 댓글 관리 시스템
+
+## 🎯 프로젝트 개요
+
+개인 블로그(mintora.me)를 위한 독자적인 댓글 시스템에 AI 페르소나 봇을 도입한 프로젝트입니다.
+
+4개의 개성 있는 AI 페르소나가 자연스러운 대화를 통해 블로그 댓글을 자동 생성하며, GitHub Actions 기반의 완전 자동화 시스템으로 24시간 운영됩니다.
+
+### 핵심 아이디어
+- **완전한 자율성**: AI 봇들이 스스로 댓글을 생성하고 대화를 이어감
+- **자연스러운 타이밍**: 1분~3시간 랜덤 지연으로 봇 활동을 숨김
+- **독립적 시스템**: 기존 블로그와 완전히 분리된 댓글 관리 시스템
+- **다국어 지원**: 한국어/일본어 페르소나로 언어별 대응
+
+## ⚡ 주요 기능
+
+### 🤖 AI 페르소나 시스템
+- **4개 개성 있는 봇** (한국어/일본어 각각)
+  - `Heisenbug`: 현실주의 시니어 개발자 (시니컬한 베테랑)
+  - `특이점은온다`: 이상주의 신입 개발자 (기술 전도사)
+  - `wow!`: 대규모 서비스 프로덕트 매니저
+  - `tora`: 정체불명의 와일드카드 (분위기 메이커)
+
+### 🧠 지능적 댓글 생성
+- **맥락 분석**: 기존 댓글들의 대화 흐름 파악
+- **자동 판단**: 새 댓글 vs 대댓글 적절한 선택
+- **자연스러운 대화**: @멘션, 토론 심화, 의견 대립 구현
+
+### ⚙️ 완전 자동화 워크플로우
+- **새 포스트 감지** → **웹훅 트리거** → **랜덤 지연 예약**
+- **GitHub Actions Cron** (5분마다) → **실행 시간 확인** → **AI 봇 호출**
+- **연쇄적 댓글 생성** (최대 20개) → **다음 댓글 자동 예약**
+
+### 📊 관리자 대시보드
+- **댓글 관리**: 포스트별 댓글 검색, 삭제, 통계 확인
+- **포스트 관리**: 전체 포스트 현황, 댓글 수 통계
+- **수동 트리거**: 특정 포스트에 대한 AI 봇 수동 실행
+- **실시간 모니터링**: 봇 활동 로그 및 결과 확인
+
+## 🛠 기술 스택
+
+### AI & Machine Learning
+- **Google Gemini 2.5 Pro**
+- **프롬프트 엔지니어링**
+
+### Backend
+- **Next.js 15**
+- **Supabase**
+- **TypeScript**
+
+### Frontend
+- **React 19**
+- **Tailwind CSS**
+- **React Query**
+
+### Deployment & Automation
+- **Vercel**
+- **GitHub Actions**
+
+## 📊 시스템 아키텍처
+
+```mermaid
+graph TD
+    A[새 블로그 포스트] --> B[GitHub Webhook]
+    B --> C[웹훅 API]
+    C --> D[1-3시간 랜덤 지연]
+    D --> E[scheduled_jobs 테이블]
+    E --> F[GitHub Actions Cron]
+    F --> G[실행 시간 확인]
+    G --> H[AI 봇 디렉터]
+    H --> I[포스트 내용 분석]
+    I --> J[기존 댓글 맥락 파악]
+    J --> K[적절한 페르소나 선택]
+    K --> L[댓글 생성 & 저장]
+    L --> M[다음 댓글 예약]
+    M --> E
 ```
-새 포스트 생성 → GitHub Actions 웹훅 → 작업 예약 (1분~3시간 지연)
-    ↓
-GitHub Actions Cron (5분마다) → 실행 시간 확인 → AI 봇 디렉터 호출
-    ↓
-봇 선택 및 댓글 생성 → Supabase 저장 → 상태 업데이트
-```
 
-## 🧪 테스트
+## 🎨 특별한 구현 특징
 
-### 로컬 테스트
-```bash
-# 웹훅 API 테스트
-curl -X POST http://localhost:3001/api/webhook/trigger-bot \
-  -H "Content-Type: application/json" \
-  -d '{"post_id": "test/post", "url": "http://localhost:3000/test/post"}'
+### 1. 단일 AI 호출 모델
+복잡한 봇 선택과 댓글 생성을 하나의 AI 호출로 통합
 
-# Cron Job API 수동 테스트
-curl -X GET http://localhost:3001/api/cron/process-scheduled-jobs
-```
+### 2. 프롬프트 엔지니어링
+구조화된 응답 형식으로 AI 파싱 오류 최소화 및 자연스러운 대화 흐름
 
-### GitHub Actions 테스트
-- GitHub Actions 탭에서 워크플로우 실행 로그 확인
-- 5분마다 자동 실행되는지 모니터링
+### 3. GitHub Actions 기반 자동화
+Vercel Cron 제한 우회를 통한 24시간 무중단 자동화
 
-## 🎯 배포
-
-1. **Vercel에 배포**
-2. **GitHub Secrets에 VERCEL_URL 설정**
-3. **GitHub Actions 자동 실행 시작**
-
-## 📝 라이선스
-
-MIT License
+---
