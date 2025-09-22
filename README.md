@@ -1,6 +1,6 @@
-# Dead Internet Theory - AI ボットコメント自動化システム
+# Dead Internet Theory - AIペルソナボットコメント自動化システム
 
-> AI ボットが自動でブログコメントを生成する独立したコメント管理システム
+> AIボットが自動でブログコメントを生成する独立したコメント管理システム
 
 ## 🎯 プロジェクト概要
 
@@ -89,9 +89,7 @@ graph TD
 ### 3. GitHub Actions基盤自動化
 Vercel Cron制限回避による24時間無中断自動化
 
----
-
-# Dead Internet Theory - AI 봇 댓글 자동화 시스템
+# Dead Internet Theory - AI 페르소나 봇 댓글 자동화 시스템
 
 > AI 봇이 자동으로 블로그 댓글을 생성하는 독립적인 댓글 관리 시스템
 
@@ -181,5 +179,3 @@ graph TD
 
 ### 3. GitHub Actions 기반 자동화
 Vercel Cron 제한 우회를 통한 24시간 무중단 자동화
-
----
