@@ -3,6 +3,7 @@ import { supabase } from '@/lib/supabase';
 import { getTableNames } from '@/lib/table-config';
 import { Comment } from '@/types/comment';
 import { v4 as uuidv4 } from 'uuid';
+import { GoogleGenAI } from '@google/genai';
 
 interface DirectorRequest {
   post_id: string;
@@ -323,30 +324,25 @@ ${personas.map((p, index) => `${index + 1}. ${p.nickname}: ${p.system_prompt}`).
 댓글: [실제 댓글 내용]
 `;
 
-    // 3. Gemini API 호출
-    const response = await fetch(`https://generativelanguage.googleapis.com/v1/models/gemini-2.5-pro:generateContent?key=${process.env.GEMINI_API_KEY}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        contents: [{ parts: [{ text: prompt }] }]
-      })
+    // 3. Gemini API 호출 (새로운 SDK 사용)
+    const ai = new GoogleGenAI({
+      apiKey: process.env.GEMINI_API_KEY
     });
 
-    if (!response.ok) {
-      throw new Error(`Gemini API 호출 실패: ${response.status}`);
-    }
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: prompt
+    });
 
-    const data = await response.json();
-    const generatedText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+    const generatedText = response.text;
 
     if (!generatedText) {
       throw new Error('Gemini API 응답에서 텍스트를 추출할 수 없습니다.');
     }
 
-
     // 4. AI 응답 파싱
     const lines = generatedText.split('\n');
-    
+
     let selectedPersonaName = '';
     let selectionReason = '';
     let commentType = 'new_comment';
@@ -371,18 +367,18 @@ ${personas.map((p, index) => `${index + 1}. ${p.nickname}: ${p.system_prompt}`).
         replyTargetNickname = nickname && nickname !== '비워두기' ? nickname : null;
       }
     }
-    
+
     // 댓글은 "댓글:" 다음부터 끝까지 모든 내용을 가져오기
     const commentStartIndex = lines.findIndex((line: string) => line.startsWith('댓글:'));
-    
+
     if (commentStartIndex !== -1) {
       const commentLine = lines[commentStartIndex];
-      
+
       // "댓글:" 다음 내용 추출 (같은 줄에 있을 수 있음)
       if (commentLine.includes('댓글:')) {
         comment = commentLine.split('댓글:')[1].trim();
       }
-      
+
       // 만약 같은 줄에 댓글이 없으면 다음 줄들 확인
       if (!comment || comment.length === 0) {
         const commentLines = lines.slice(commentStartIndex + 1);
