@@ -288,7 +288,7 @@ ${personas.map((p, index) => `${index + 1}. ${p.nickname}: ${p.system_prompt}`).
 - 새로운 관점이나 반박할 만한 내용이 남아있다고 판단될 경우
 - 진짜 사람의 참여로 인해 대화가 다시 활성화되었을 경우
 
-3. **강제 종료:** 어떤 경우에도 봇 댓글의 총합은 **20개**를 넘을 수 없습니다. 20개가 되면, 더 이상 새로운 댓글을 생성하지 마세요.
+3. **강제 종료:** 어떤 경우에도 봇 댓글의 총합은 **15개**를 넘을 수 없습니다. 15개가 되면, 더 이상 새로운 댓글을 생성하지 마세요.
 
 **연속성 표현 예시 (선택사항)**:
 - "앞서 언급했던...", "제가 좋아했던...", "이전에 우려했던..."
@@ -453,9 +453,9 @@ async function scheduleNextComment(
   currentCommentCount: number
 ): Promise<void> {
   try {
-    // 봇 댓글 수 제한 확인 (최대 20개)
-    if (currentCommentCount >= 20) {
-      console.log(`봇 댓글 수 제한에 도달: ${currentCommentCount}/20`);
+    // 봇 댓글 수 제한 확인 (최대 15개)
+    if (currentCommentCount >= 15) {
+      console.log(`봇 댓글 수 제한에 도달: ${currentCommentCount}/15`);
       return;
     }
 
