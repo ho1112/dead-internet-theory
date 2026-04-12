@@ -166,6 +166,9 @@ function analyzeConversationStructure(comments: Comment[]): string {
 
   const parentComments = comments.filter(c => !c.parent_id);
   const replyComments = comments.filter(c => c.parent_id);
+  const totalComments = parentComments.length + replyComments.length;
+  const maxLimit = 15;
+  const isNearingLimit = totalComments >= 12;
   const maxDepth = Math.max(...comments.map(c => {
     let depth = 0;
     let current = c;
@@ -177,15 +180,27 @@ function analyzeConversationStructure(comments: Comment[]): string {
     return depth;
   }));
 
-  let analysis = `대화 현황: ${parentComments.length}개 메인 댓글, ${replyComments.length}개 대댓글\n`;
-  analysis += `대화 깊이: 최대 ${maxDepth}단계\n`;
+  let analysis = `현재 현황: 메인 댓글 ${parentComments.length}개, 대댓글 ${replyComments.length}개 (총 ${totalComments}/${maxLimit}개)\n`;
+  analysis += `현재 최대 대화 깊이: ${maxDepth}단계\n`;
 
-  if (replyComments.length > 0) {
-    analysis += '대화가 활발하게 진행되고 있습니다. 적절한 대댓글이나 새로운 관점의 댓글이 도움이 될 수 있습니다.\n';
-  } else if (parentComments.length >= 2) {
-    analysis += '여러 메인 댓글이 있지만 대화가 깊어지지 않았습니다. 대화를 이끌어갈 수 있는 댓글이 필요합니다.\n';
-  } else {
-    analysis += '아직 대화 초기 단계입니다. 포스트 내용에 대한 다양한 관점의 댓글이 도움이 될 수 있습니다.\n';
+  if (isNearingLimit) {
+    analysis += '전체 댓글 한도에 도달해갑니다. 새로운 논쟁을 시작하지 말고, 기존 대화를 자연스럽게 마무리하거나 본문의 핵심을 요약하는 댓글을 작성하세요.\n';
+  }
+  // 2. 특정 스레드가 너무 깊어질 때 (블랙홀 방지)
+  else if (maxDepth >= 3 || (replyComments.length > parentComments.length * 2 && parentComments.length > 0)) {
+    analysis += '특정 대화 스레드가 너무 길어졌습니다. 기존 대화에 답글(대댓글)을 달지 마세요! 본문의 다른 부분이나 완전히 새로운 주제를 짚어내는 **[새로운 메인 댓글]**을 작성하여 분위기를 환기하세요.\n';
+  }
+  // 3. 메인 댓글만 많고 티키타카가 없을 때
+  else if (parentComments.length >= 3 && replyComments.length < 2) {
+    analysis += '각자 자기 이야기만 하고 있어 소통이 부족합니다. 새로운 메인 댓글을 쓰지 말고, 다른 캐릭터가 작성한 메인 댓글에 동조하거나 반박하는 **[대댓글]**을 작성하여 대화를 이어가세요.\n';
+  }
+  // 4. 초기 단계
+  else if (totalComments < 3) {
+    analysis += '아직 대화 초기 단계입니다. 포스트 내용에 대한 각 캐릭터의 뚜렷한 주장이 담긴 **[새로운 메인 댓글]**을 작성하여 논의의 불씨를 지피세요.\n';
+  }
+  // 5. 균형이 맞을 때 (자유도 부여)
+  else {
+    analysis += '대화가 메인 댓글과 대댓글 간에 균형 있게 진행 중입니다. 캐릭터의 성격에 맞춰 기존 대화에 흥미로운 대댓글을 달거나, 새로운 메인 댓글을 작성하세요.\n';
   }
 
   return analysis;
@@ -272,7 +287,7 @@ ${personas.map((p, index) => `${index + 1}. ${p.nickname}: ${p.system_prompt}`).
 - **지시**: 이제 반말을 섞어 사용할 수 있습니다. 만약 당신이 '반말로 작성된 댓글'에 대댓글을 다는 경우, 당신의 기본 말투가 존댓말이더라도, 그에 맞춰 당신도 자연스럽게 반말을 섞어 사용할 수 있습니다. 상대방 주장의 논리적 허점이나 기술적인 약점을 직접적으로 지적하세요. (예: "그건 이론상이고, 실제로는 ~~한 문제가 생겨.", "그 방법은 성능 이슈가 있을 텐데.")
 
 **Level 3: 공격적인 논쟁 (Aggressive Debate)**
-- **상황**: 토론이 4개 이상의 댓글로 이어지며 과열될 때.
+- **상황**: 토론이 2개 이상의 댓글로 이어지며 과열될 때.
 - **지시**: 더 과감한 표현을 사용하세요. 상대방의 지식이나 경험에 의문을 제기하는 수사적인 질문을 던질 수 있습니다. (예: "혹시 실무 경험 없으신가요? 이론이랑 현실은 다릅니다.", "~~라고 하셨는데, 그건 기본도 모르는 소리야.")
 
 **[매우 중요한 공통 규칙]**
